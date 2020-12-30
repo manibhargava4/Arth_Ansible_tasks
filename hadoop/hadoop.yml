@@ -1,0 +1,79 @@
+- name: Copying Required softwares and installing them for Hadoop
+  hosts: all
+  vars_files:
+          - hvar.yml
+  tasks:
+          - name: Copying Hadoop and JDK Softwares to namenode and datanode
+            copy:
+                    src: "{{ item }}"
+                    dest: /root/
+            loop:
+                    - "{{ hadoop_filepath }}"
+                    - "{{ jdk_filepath }}"
+
+          - name: Installing JDK and Hadoop softwares
+            command: "{{ item }}"
+            ignore_errors: yes
+            loop:
+                    - "rpm -ivh jdk-8u171-linux-x64.rpm"
+                    - "rpm -ivh hadoop-1.2.1-1.x86_64.rpm --force"
+                
+          - name: Firewalld removing
+            service:
+                    name: firewalld
+                    state: stopped
+
+- name: Configuring Hadoop Namenode
+  hosts: namenode
+  vars_files:
+          - hvar.yml
+  tasks:
+          
+          - name: Creating a directory for namenode
+            file:
+                    path: "{{ namenode_directory }}"
+                    state: directory
+
+          - name: Configuring hdfs-site.xml file
+            template:
+                    dest: "{{ hdfs_path }}"
+                    src: "{{ hdfs_filepath1 }}"
+
+          - name: Configuring core-site.xml file
+            template:
+                    dest: "{{ core_path }}"
+                    src: "{{ core_filepath }}"
+
+          - name: Formatting the directory
+            command: "hadoop namenode -format -force"          
+
+          - name: Starting namenode services
+            command: "hadoop-daemon.sh start namenode"
+
+
+- name: Configuring Hadoop Datanode
+  hosts: datanode
+  vars_files:
+          - hvar.yml
+  tasks:
+          - name: Creating a directory for datanode
+            file:
+                    path: "{{ datanode_directory }}"
+                    state: directory
+
+          - name: Configuring hdfs-site.xml file
+            template:
+                    dest: "{{ hdfs_path }}"
+                    src: "{{ hdfs_filepath2 }}"
+
+          - name: Configuring core-site.xml file
+            template:
+                    dest: "{{ core_path }}"
+                    src: "{{ core_filepath }}"
+          
+          - name: Starting datanode services
+            command: "hadoop-daemon.sh start datanode"
+
+          - name: Hadoop cluster status
+            debug:
+                    msg: "Hadoop Cluster created successfully"           
